@@ -68,10 +68,24 @@ def load_full_transactions() -> pd.DataFrame:
 
 def get_client_list() -> pd.DataFrame:
     """
-    Retourne la liste unique des clients avec quelques métadonnées.
+    Retourne la liste unique des clients avec quelques métadonnées,
+    dont le montant total dépensé (TotalSpent).
     """
     clients = load_clients().copy()
-    # Optionnel : on peut créer un libellé lisible pour l’UI
+
+    # Agréger le montant total dépensé par client
+    tx = load_transactions().copy()
+    spend_agg = (
+        tx.groupby("ClientID")["SalesNetAmountEuro"]
+        .sum()
+        .reset_index()
+        .rename(columns={"SalesNetAmountEuro": "TotalSpent"})
+    )
+
+    clients = clients.merge(spend_agg, on="ClientID", how="left")
+    clients["TotalSpent"] = clients["TotalSpent"].fillna(0.0)
+
+    # Libellé lisible pour l’UI
     clients["Label"] = (
         clients["ClientID"].astype(str)
         + " | "
